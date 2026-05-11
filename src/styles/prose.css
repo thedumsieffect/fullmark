@@ -1,0 +1,51 @@
+/*
+ * Prose typography. Font-conditional sizing — Charter and Inter have different
+ * cap-heights at the same px size, so per-font size tokens keep visual size
+ * consistent across font choices.
+ */
+
+:root {
+  /* Default body = Charter (settings will swap [data-font-body="..."]) */
+  --body-size: 17px;
+  --body-leading: 1.7;
+  --body-family: "Charter", "Charter BT", "Georgia", "Times New Roman", serif;
+  --body-letter-spacing: -0.005em;
+
+  --ui-size: 14px;
+  --ui-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
+
+  --mono-family: "JetBrains Mono", "SF Mono", "Menlo", "Consolas", monospace;
+  --mono-size: 0.9em;
+
+  --heading-family: var(--body-family);
+}
+
+[data-font-body="ia-duo"] {
+  --body-size: 16px;
+  --body-leading: 1.75;
+  --body-family: "iA Writer Duo S", "iA Writer Duo", "iA Duo", monospace;
+  --body-letter-spacing: 0;
+}
+
+[data-font-body="inter"] {
+  --body-size: 15px;
+  --body-leading: 1.65;
+  --body-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, sans-serif;
+  --body-letter-spacing: -0.01em;
+}
+
+[data-font-body="garamond"] {
+  --body-size: 18px;
+  --body-leading: 1.7;
+  --body-family: "EB Garamond", "Garamond", "Cardo", "Times New Roman", serif;
+  --body-letter-spacing: 0;
+}
+
+[data-font-body="sohne"] {
+  --body-size: 15px;
+  --body-leading: 1.6;
+  --body-family: "Söhne", "Inter", -apple-system, sans-serif;
+  --body-letter-spacing: -0.01em;
+}

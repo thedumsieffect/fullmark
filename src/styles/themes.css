@@ -1,0 +1,95 @@
+/*
+ * Theme tokens — light + dark via [data-theme].
+ * Sepia and high-contrast variants land in v0.2 via CSS-var swaps.
+ */
+
+:root,
+[data-theme="light"] {
+  --bg: #fafaf7;
+  --bg-elev: #ffffff;
+  --bg-sidebar: #f5f3ee;
+  --text: #1a1a1a;
+  --text-muted: #555555;
+  --text-faint: #999999;
+  --accent: #b65a2e;
+  --accent-soft: rgba(182, 90, 46, 0.1);
+  --accent-strong: #9b4923;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.14);
+  --code-bg: #f5f2ec;
+  --code-border: rgba(0, 0, 0, 0.06);
+  --selection: rgba(182, 90, 46, 0.2);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  --callout-note-bg: rgba(60, 120, 200, 0.08);
+  --callout-note-fg: #2d6cb8;
+  --callout-tip-bg: rgba(46, 160, 90, 0.08);
+  --callout-tip-fg: #1e7a40;
+  --callout-warning-bg: rgba(210, 150, 30, 0.1);
+  --callout-warning-fg: #a26a10;
+  --callout-important-bg: rgba(140, 80, 200, 0.08);
+  --callout-important-fg: #6a3da0;
+  --callout-caution-bg: rgba(200, 60, 60, 0.08);
+  --callout-caution-fg: #a13030;
+
+  /* Syntax (highlight.js) — warm light palette */
+  --hl-keyword: #9a3da0;
+  --hl-string: #5a8f3e;
+  --hl-number: #b65a2e;
+  --hl-comment: #8a8780;
+  --hl-function: #1f6fb8;
+  --hl-type: #1d7c87;
+  --hl-variable: #2a2a2a;
+  --hl-meta: #6f4f1e;
+  --hl-attr: #b65a2e;
+  --hl-tag: #c2382a;
+  --hl-section: #c2382a;
+  --hl-bullet: #1f6fb8;
+  --hl-deletion-bg: rgba(200, 60, 60, 0.08);
+  --hl-addition-bg: rgba(60, 160, 90, 0.1);
+}
+
+[data-theme="dark"] {
+  --bg: #1a1715;
+  --bg-elev: #221f1c;
+  --bg-sidebar: #16130f;
+  --text: #e8e5e0;
+  --text-muted: #999999;
+  --text-faint: #666666;
+  --accent: #e8956a;
+  --accent-soft: rgba(232, 149, 106, 0.15);
+  --accent-strong: #ffae87;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --code-bg: #23201e;
+  --code-border: rgba(255, 255, 255, 0.06);
+  --selection: rgba(232, 149, 106, 0.25);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
+
+  --callout-note-bg: rgba(80, 140, 220, 0.12);
+  --callout-note-fg: #7eb5f0;
+  --callout-tip-bg: rgba(70, 180, 110, 0.12);
+  --callout-tip-fg: #6ad198;
+  --callout-warning-bg: rgba(220, 165, 60, 0.14);
+  --callout-warning-fg: #e9bb6c;
+  --callout-important-bg: rgba(170, 110, 220, 0.14);
+  --callout-important-fg: #c79df0;
+  --callout-caution-bg: rgba(220, 90, 90, 0.12);
+  --callout-caution-fg: #ec9090;
+
+  /* Syntax (highlight.js) — warm dark palette */
+  --hl-keyword: #d49bef;
+  --hl-string: #8fc678;
+  --hl-number: #e8956a;
+  --hl-comment: #7a766f;
+  --hl-function: #7eb7ee;
+  --hl-type: #7cc8d4;
+  --hl-variable: #e8e5e0;
+  --hl-meta: #d1a060;
+  --hl-attr: #e8956a;
+  --hl-tag: #ec9090;
+  --hl-section: #ec9090;
+  --hl-bullet: #7eb7ee;
+  --hl-deletion-bg: rgba(220, 90, 90, 0.15);
+  --hl-addition-bg: rgba(80, 200, 130, 0.15);
+}
