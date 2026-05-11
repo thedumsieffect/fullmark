@@ -592,12 +592,44 @@ button {
   padding: 1.1em 1.4em;
 }
 
-/* Hide tab-bar / sidebar in reader mode just in case any consumer of
-   .app-reader leaves them mounted */
+/* Reader mode collapses everything except the prose. We keep the editor
+   mounted (don't conditionally render) so toggling doesn't remount
+   ProseMirror — just hide the chrome. */
 .app-reader .sidebar,
 .app-reader .tab-bar,
-.app-reader .app-statusbar {
+.app-reader .app-statusbar,
+.app-reader .view-toggle {
   display: none !important;
+}
+
+/* Reader mode adjusts the body grid since the statusbar is gone */
+.app-reader {
+  grid-template-rows: auto 1fr;
+}
+
+/* Reader toggle button in the titlebar */
+.reader-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  height: 22px;
+  cursor: pointer;
+  font-family: var(--ui-family);
+}
+
+.reader-toggle:hover {
+  border-color: var(--accent-soft);
+  color: var(--accent);
+}
+
+.app-reader .reader-toggle {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
 }
 
 /* -- Slash menu popover -- */

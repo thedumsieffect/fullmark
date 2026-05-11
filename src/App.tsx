@@ -53,7 +53,7 @@ export default function App() {
     document.documentElement.setAttribute("data-font-body", "charter");
   }, []);
 
-  // Reflect reader mode into the DOM so CSS can respond
+  // Reflect reader mode into the DOM so CSS can hide chrome
   useEffect(() => {
     document.documentElement.setAttribute(
       "data-reader",
@@ -61,10 +61,31 @@ export default function App() {
     );
   }, [readerMode]);
 
-  // Cmd+R toggles reader mode globally
+  // Capture-phase blocker for Cmd+R / Cmd+Shift+R / Cmd+Q-style reload paths.
+  // WKWebView under Tauri respects e.preventDefault but only when called BEFORE
+  // its own keybinding fires — capture phase is the safe place. Without this,
+  // hitting Cmd+R reloads the whole web layer.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "r") {
+      // Block Cmd+R (reload) and Cmd+Shift+R (hard reload) in all cases.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true });
+  }, []);
+
+  // Cmd+Alt+R toggles reader mode (Cmd+R is intentionally blocked above to
+  // stop WebView reload; Alt-modifier avoids any browser shortcut collision).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.altKey &&
+        e.key.toLowerCase() === "r"
+      ) {
         e.preventDefault();
         toggleReaderMode();
       }
@@ -101,7 +122,11 @@ export default function App() {
   // Cmd+Shift+M flips between rendered and source view
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "m"
+      ) {
         e.preventDefault();
         toggleViewMode();
       }
@@ -110,14 +135,11 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleViewMode]);
 
-  // "Open With FullMark" handler — fires when macOS Launch Services hands us
-  // a file path (right-click in Finder, double-click a .md, etc.).
+  // "Open With FullMark" handler
   useEffect(() => {
     const unlistenP = listen<string[]>("open-files", async (event) => {
       const paths = event.payload ?? [];
       if (paths.length === 0) return;
-
-      // Infer a workspace from the first file's parent dir if none is open.
       const ws = useWorkspaceStore.getState();
       if (!ws.root) {
         const firstPath = paths[0];
@@ -132,8 +154,6 @@ export default function App() {
           console.error("Failed to open workspace from file:", e);
         }
       }
-
-      // Open each file in a tab (single-tab-per-path enforced by the store).
       const tabs = useTabsStore.getState();
       for (const path of paths) {
         try {
@@ -159,29 +179,20 @@ export default function App() {
     );
   }
 
-  if (readerMode) {
-    return (
-      <div className="app app-reader">
-        <header className="app-titlebar" data-tauri-drag-region>
-          <span className="app-title">
-            {activeTab ? stripExt(activeTab.name) : "FullMark"}
-            <span className="app-title-mode">  ·  Reader</span>
-          </span>
-        </header>
-        <main className="app-main">
-          <EditorPane />
-        </main>
-      </div>
-    );
-  }
-
+  // Always render the full structure. Reader mode is purely a CSS class on
+  // the root element (set via the data-reader attribute on documentElement
+  // above) — this keeps the editor mounted across mode switches so we don't
+  // remount the ProseMirror instance, which froze the UI on large files.
   return (
-    <div className="app app-workspace">
+    <div className={`app app-workspace${readerMode ? " app-reader" : ""}`}>
       <header className="app-titlebar" data-tauri-drag-region>
         <div className="app-titlebar-left" />
         <span className="app-title">
           {activeTab ? stripExt(activeTab.name) : "FullMark"}
-          {activeTab?.dirty && (
+          {readerMode && (
+            <span className="app-title-mode">  ·  Reader</span>
+          )}
+          {!readerMode && activeTab?.dirty && (
             <span className="app-title-dirty" aria-label="unsaved">
               {" "}
               •
@@ -189,7 +200,15 @@ export default function App() {
           )}
         </span>
         <div className="app-titlebar-right">
-          {activeTab && <ViewToggle />}
+          {activeTab && !readerMode && <ViewToggle />}
+          <button
+            className="reader-toggle"
+            onClick={toggleReaderMode}
+            aria-pressed={readerMode}
+            title={readerMode ? "Exit reader (⌘⌥R)" : "Reader mode (⌘⌥R)"}
+          >
+            {readerMode ? "✕" : "Read"}
+          </button>
         </div>
       </header>
       <div className="app-body">
@@ -216,7 +235,7 @@ export default function App() {
             </>
           )}
           <span className="status-hint">⌘K Search</span>
-          <span className="status-hint">⌘R Reader</span>
+          <span className="status-hint">⌥⌘R Reader</span>
         </span>
       </footer>
       <QuickSwitcher open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
