@@ -127,6 +127,26 @@
   font-size: 1em;
 }
 
+/* Language chip in the top-right of a code block.
+   TipTap renders the language as `class="language-xxx"` on the inner <code>,
+   so we use a CSS-only sibling trick: pre gets ::after content via the
+   `data-tiptap-language` attribute we'll set in code-highlight.ts. */
+.tiptap pre {
+  position: relative;
+}
+.tiptap pre[data-tiptap-language]::after {
+  content: attr(data-tiptap-language);
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-family: var(--mono-family);
+  pointer-events: none;
+}
+
 /* Lists */
 .tiptap ul,
 .tiptap ol {

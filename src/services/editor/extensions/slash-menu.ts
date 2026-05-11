@@ -85,10 +85,65 @@ const ALL_ITEMS: SlashItem[] = [
   },
   {
     title: "Code block",
-    description: "Syntax-highlighted code",
+    description: "Auto-detect language",
     shortcut: "```",
     cmd: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).setCodeBlock().run(),
+  },
+  {
+    title: "Code · JavaScript",
+    description: "JS, with highlighting",
+    cmd: ({ editor, range }) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setCodeBlock({ language: "javascript" })
+        .run(),
+  },
+  {
+    title: "Code · TypeScript",
+    description: "TS, with highlighting",
+    cmd: ({ editor, range }) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setCodeBlock({ language: "typescript" })
+        .run(),
+  },
+  {
+    title: "Code · Python",
+    description: "Python, with highlighting",
+    cmd: ({ editor, range }) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setCodeBlock({ language: "python" })
+        .run(),
+  },
+  {
+    title: "Code · Bash",
+    description: "Shell script, with highlighting",
+    cmd: ({ editor, range }) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setCodeBlock({ language: "bash" })
+        .run(),
+  },
+  {
+    title: "Code · JSON",
+    description: "JSON, with highlighting",
+    cmd: ({ editor, range }) =>
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setCodeBlock({ language: "json" })
+        .run(),
   },
   {
     title: "Divider",

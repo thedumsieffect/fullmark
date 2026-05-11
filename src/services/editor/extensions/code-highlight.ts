@@ -1,14 +1,10 @@
 /**
  * Syntax-highlighted code blocks via lowlight (highlight.js engine).
  *
- * Registers a curated set of common languages — enough for real reading on
- * a brain/ vault without ballooning bundle size. Tokens render as `<span
- * class="hljs-keyword">` etc. — paired with theme CSS in editor.css.
- *
- * Why lowlight, not Shiki: synchronous tokenization (no async TipTap surgery),
- * official tiptap extension, ships in the editor bundle without WASM loading.
- * Shiki upgrade is a v0.2 polish — VS Code-quality theme colors at the cost
- * of an async render path.
+ * Beyond the upstream defaults we tweak:
+ *   - exit-on-Enter-after-empty-line so the user isn't trapped (triple-Enter
+ *     still works too)
+ *   - empty-block placeholder so the user knows ↓ also escapes
  */
 
 import { CodeBlockLowlight } from "@tiptap/extension-code-block-lowlight";
@@ -57,8 +53,55 @@ lowlight.register({
   yml: yaml,
 });
 
-export const CodeHighlight = CodeBlockLowlight.configure({
+export { lowlight };
+
+export const CodeHighlight = CodeBlockLowlight.extend({
+  // Expose the resolved language on the <pre> as a data attribute so the
+  // language chip in CSS can pick it up. (Upstream only writes a `language-*`
+  // class onto the <code>, which CSS can't pull text from.)
+  renderHTML({ node, HTMLAttributes }) {
+    const upstream = this.parent?.({ node, HTMLAttributes });
+    if (!Array.isArray(upstream)) return upstream as unknown as any;
+    const [tag, attrs, ...children] = upstream as [string, Record<string, unknown>, ...unknown[]];
+    const language = node.attrs.language as string | null;
+    const next = language
+      ? { ...attrs, "data-tiptap-language": language }
+      : attrs;
+    return [tag, next, ...children] as unknown as any;
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      ...this.parent?.(),
+      // Enter at the end of an empty last line → exit the code block.
+      // Triple-Enter still works (upstream handles that path).
+      Enter: ({ editor }) => {
+        const { $from, empty } = editor.state.selection;
+        if (!empty) return false;
+        if ($from.parent.type.name !== this.name) return false;
+
+        const isAtEnd = $from.parentOffset === $from.parent.content.size;
+        if (!isAtEnd) return false;
+
+        const text = $from.parent.textContent;
+        const endsEmpty = text.length === 0 || text.endsWith("\n");
+        if (!endsEmpty) return false;
+
+        return editor
+          .chain()
+          .command(({ tr }) => {
+            if (text.endsWith("\n")) {
+              tr.delete($from.pos - 1, $from.pos);
+            }
+            return true;
+          })
+          .exitCode()
+          .run();
+      },
+    };
+  },
+}).configure({
   lowlight,
-  defaultLanguage: "plaintext",
+  defaultLanguage: null,
   HTMLAttributes: { spellcheck: "false" },
 });
