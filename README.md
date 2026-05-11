@@ -48,6 +48,12 @@ pnpm install
 pnpm tauri build     # produces src-tauri/target/release/bundle/dmg/FullMark_*.dmg + .app
 ```
 
+To build and then install the generated app from the DMG into `/Applications`, use the prompted helper:
+
+```bash
+pnpm build:install
+```
+
 For development:
 ```bash
 pnpm tauri dev       # hot-reload window
