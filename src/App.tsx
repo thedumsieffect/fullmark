@@ -61,37 +61,25 @@ export default function App() {
     );
   }, [readerMode]);
 
-  // Capture-phase blocker for Cmd+R / Cmd+Shift+R / Cmd+Q-style reload paths.
-  // WKWebView under Tauri respects e.preventDefault but only when called BEFORE
-  // its own keybinding fires — capture phase is the safe place. Without this,
-  // hitting Cmd+R reloads the whole web layer.
+  // Cmd+R toggles reader mode. Registered on the capture phase + with
+  // preventDefault so WKWebView's default page-reload doesn't fire — that
+  // was the source of the perceived "freeze". Capture phase runs before the
+  // WebView's own handler.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // Block Cmd+R (reload) and Cmd+Shift+R (hard reload) in all cases.
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleReaderMode();
+      }
+      // Also block Cmd+Shift+R (hard reload) so it doesn't reload either.
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "r") {
         e.preventDefault();
         e.stopPropagation();
       }
     };
     window.addEventListener("keydown", onKey, { capture: true });
     return () => window.removeEventListener("keydown", onKey, { capture: true });
-  }, []);
-
-  // Cmd+Alt+R toggles reader mode (Cmd+R is intentionally blocked above to
-  // stop WebView reload; Alt-modifier avoids any browser shortcut collision).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.altKey &&
-        e.key.toLowerCase() === "r"
-      ) {
-        e.preventDefault();
-        toggleReaderMode();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
   }, [toggleReaderMode]);
 
   // Cmd+K opens the quick switcher (requires a workspace; ignored otherwise)
@@ -201,14 +189,6 @@ export default function App() {
         </span>
         <div className="app-titlebar-right">
           {activeTab && !readerMode && <ViewToggle />}
-          <button
-            className="reader-toggle"
-            onClick={toggleReaderMode}
-            aria-pressed={readerMode}
-            title={readerMode ? "Exit reader (⌘⌥R)" : "Reader mode (⌘⌥R)"}
-          >
-            {readerMode ? "✕" : "Read"}
-          </button>
         </div>
       </header>
       <div className="app-body">
@@ -235,7 +215,7 @@ export default function App() {
             </>
           )}
           <span className="status-hint">⌘K Search</span>
-          <span className="status-hint">⌥⌘R Reader</span>
+          <span className="status-hint">⌘R Reader</span>
         </span>
       </footer>
       <QuickSwitcher open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
