@@ -6,6 +6,7 @@ import { EditorPane } from "@/components/Editor/EditorPane";
 import { Welcome } from "@/components/Welcome";
 import { QuickSwitcher } from "@/components/CommandPalette/QuickSwitcher";
 import { SettingsModal } from "@/components/Settings/SettingsModal";
+import { ViewToggle } from "@/components/Editor/ViewToggle";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useTabsStore, selectActiveTab } from "@/stores/tabs";
 import { useUIStore } from "@/stores/ui";
@@ -17,6 +18,7 @@ export default function App() {
   const readerMode = useUIStore((s) => s.readerMode);
   const toggleReaderMode = useUIStore((s) => s.toggleReaderMode);
   const themePreference = useUIStore((s) => s.themePreference);
+  const toggleViewMode = useUIStore((s) => s.toggleViewMode);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -96,6 +98,18 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Cmd+Shift+M flips between rendered and source view
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        toggleViewMode();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleViewMode]);
+
   // "Open With FullMark" handler — fires when macOS Launch Services hands us
   // a file path (right-click in Finder, double-click a .md, etc.).
   useEffect(() => {
@@ -164,6 +178,7 @@ export default function App() {
   return (
     <div className="app app-workspace">
       <header className="app-titlebar" data-tauri-drag-region>
+        <div className="app-titlebar-left" />
         <span className="app-title">
           {activeTab ? stripExt(activeTab.name) : "FullMark"}
           {activeTab?.dirty && (
@@ -173,6 +188,9 @@ export default function App() {
             </span>
           )}
         </span>
+        <div className="app-titlebar-right">
+          {activeTab && <ViewToggle />}
+        </div>
       </header>
       <div className="app-body">
         <Sidebar onOpenSettings={() => setSettingsOpen(true)} />

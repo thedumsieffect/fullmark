@@ -1,15 +1,16 @@
 /**
- * Wraps the BlockEditor with workspace/tabs integration:
+ * Wraps the editor with workspace/tabs integration:
  *  - loads content from the active tab
  *  - propagates edits back into the tabs store (sets dirty)
- *  - remounts editor when active file changes (via React key)
+ *  - switches between rendered (TipTap) and source (textarea) views
  *  - registers Cmd+S to save the active tab
  *  - debounced auto-save (1.5s after last edit) on dirty tabs
- *  - reader mode locks editing
+ *  - reader mode forces rendered + locks editing
  */
 
 import { useEffect } from "react";
 import { BlockEditor } from "./BlockEditor";
+import { SourceEditor } from "./SourceEditor";
 import { useTabsStore, selectActiveTab } from "@/stores/tabs";
 import { useUIStore } from "@/stores/ui";
 
@@ -20,6 +21,9 @@ export function EditorPane() {
   const updateContent = useTabsStore((s) => s.updateContent);
   const saveActive = useTabsStore((s) => s.saveActive);
   const readerMode = useUIStore((s) => s.readerMode);
+  const viewMode = useUIStore((s) => s.viewMode);
+
+  const effectiveMode = readerMode ? "rendered" : viewMode;
 
   // Cmd+S to save (suppressed in reader mode — there's nothing to save)
   useEffect(() => {
@@ -49,6 +53,15 @@ export function EditorPane() {
       <div className="editor-empty">
         <p>Click a file in the sidebar to start editing.</p>
       </div>
+    );
+  }
+
+  if (effectiveMode === "source") {
+    return (
+      <SourceEditor
+        value={activeTab.content}
+        onChange={(md) => updateContent(activeTab.path, md)}
+      />
     );
   }
 
