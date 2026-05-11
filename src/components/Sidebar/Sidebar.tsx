@@ -21,7 +21,11 @@ const THEME_TITLE: Record<ThemePreference, string> = {
   dark: "Theme: dark (click for system)",
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  onOpenSettings?: () => void;
+}
+
+export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
   const root = useWorkspaceStore((s) => s.root);
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const refreshTree = useWorkspaceStore((s) => s.refreshTree);
@@ -72,6 +76,16 @@ export function Sidebar() {
           >
             ⤴
           </button>
+          {onOpenSettings && (
+            <button
+              className="sidebar-action"
+              onClick={onOpenSettings}
+              title="Settings (⌘,)"
+              aria-label="Settings"
+            >
+              ⚙
+            </button>
+          )}
         </div>
       </header>
       <div className="sidebar-tree">

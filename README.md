@@ -25,7 +25,7 @@ FullMark is a desktop markdown editor that combines the block-based editing mode
 
 ### Option A — DMG (macOS, Apple Silicon)
 
-1. Download the DMG from the [latest release](https://github.com/thedumsieffect/fullmark/releases) — direct link: [FullMark_0.1.0_aarch64.dmg](https://github.com/thedumsieffect/fullmark/releases/download/v0.1.0/FullMark_0.1.0_aarch64.dmg) (3.5 MB).
+1. Download the DMG from the [latest release](https://github.com/thedumsieffect/fullmark/releases/latest) — direct link: [FullMark_0.1.1_aarch64.dmg](https://github.com/thedumsieffect/fullmark/releases/download/v0.1.1/FullMark_0.1.1_aarch64.dmg) (~3.5 MB).
 2. Open the `.dmg` and drag **FullMark.app** into your Applications folder.
 3. **First launch:** because the app isn't notarized yet, macOS Gatekeeper will block it. Either:
    - Right-click FullMark.app → **Open** → confirm in the dialog, or
@@ -39,8 +39,21 @@ FullMark is a desktop markdown editor that combines the block-based editing mode
 
 ### Option B — Build from source
 
-Requires: Node ≥20, pnpm ≥9, Rust stable, Xcode CLT (macOS).
+Prereqs (one-time setup):
 
+```bash
+# 1. Node ≥20 and pnpm — easiest via nvm + corepack, or use brew:
+brew install node pnpm
+
+# 2. Rust stable (Tauri compiles the shell in Rust):
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+. "$HOME/.cargo/env"   # pick up cargo in the current shell
+
+# 3. Xcode Command Line Tools (needed for the linker on macOS):
+xcode-select --install
+```
+
+Then:
 ```bash
 git clone https://github.com/thedumsieffect/fullmark.git
 cd fullmark
@@ -52,6 +65,12 @@ For development:
 ```bash
 pnpm tauri dev       # hot-reload window
 ```
+
+**Common build errors:**
+
+- `failed to run command cargo metadata` → Rust isn't installed or `cargo` isn't on `$PATH`. Run step 2 above, then `. "$HOME/.cargo/env"` in the current shell (or restart your terminal).
+- `xcrun: error: invalid active developer path` → Run step 3 above.
+- `error: linker 'cc' not found` → Same fix, Xcode CLT.
 
 ## Usage
 

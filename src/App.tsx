@@ -5,6 +5,7 @@ import { TabBar } from "@/components/Tabs/TabBar";
 import { EditorPane } from "@/components/Editor/EditorPane";
 import { Welcome } from "@/components/Welcome";
 import { QuickSwitcher } from "@/components/CommandPalette/QuickSwitcher";
+import { SettingsModal } from "@/components/Settings/SettingsModal";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useTabsStore, selectActiveTab } from "@/stores/tabs";
 import { useUIStore } from "@/stores/ui";
@@ -17,6 +18,7 @@ export default function App() {
   const toggleReaderMode = useUIStore((s) => s.toggleReaderMode);
   const themePreference = useUIStore((s) => s.themePreference);
   const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Restore workspace tree on launch
   useEffect(() => {
@@ -81,6 +83,18 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [root]);
+
+  // Cmd+, opens Settings
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        setSettingsOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // "Open With FullMark" handler — fires when macOS Launch Services hands us
   // a file path (right-click in Finder, double-click a .md, etc.).
@@ -161,7 +175,7 @@ export default function App() {
         </span>
       </header>
       <div className="app-body">
-        <Sidebar />
+        <Sidebar onOpenSettings={() => setSettingsOpen(true)} />
         <main className="app-main">
           <TabBar />
           <EditorPane />
@@ -188,6 +202,10 @@ export default function App() {
         </span>
       </footer>
       <QuickSwitcher open={cmdkOpen} onClose={() => setCmdkOpen(false)} />
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   );
 }

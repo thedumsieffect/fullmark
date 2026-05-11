@@ -12,6 +12,9 @@ pub fn run() {
             commands::fs::list_dir,
             commands::fs::read_text_file,
             commands::fs::resolve_path,
+            commands::launch_services::set_default_markdown_handler,
+            commands::launch_services::get_default_markdown_handler,
+            commands::launch_services::is_default_markdown_handler,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
