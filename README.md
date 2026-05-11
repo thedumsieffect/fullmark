@@ -25,7 +25,7 @@ FullMark is a desktop markdown editor that combines the block-based editing mode
 
 ### Option A — DMG (macOS, Apple Silicon)
 
-1. Download the DMG from the [latest release](https://github.com/thedumsieffect/fullmark/releases/latest) — direct link: [FullMark_0.1.1_aarch64.dmg](https://github.com/thedumsieffect/fullmark/releases/download/v0.1.1/FullMark_0.1.1_aarch64.dmg) (~3.5 MB).
+1. Download the DMG from the [latest release](https://github.com/thedumsieffect/fullmark/releases/latest) — direct link: [FullMark_0.1.2_aarch64.dmg](https://github.com/thedumsieffect/fullmark/releases/download/v0.1.2/FullMark_0.1.2_aarch64.dmg) (~3.5 MB).
 2. Open the `.dmg` and drag **FullMark.app** into your Applications folder.
 3. **First launch:** because the app isn't notarized yet, macOS Gatekeeper will block it. Either:
    - Right-click FullMark.app → **Open** → confirm in the dialog, or
