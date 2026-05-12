@@ -10,6 +10,10 @@ import { ViewToggle } from "@/components/Editor/ViewToggle";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useTabsStore, selectActiveTab } from "@/stores/tabs";
 import { useUIStore } from "@/stores/ui";
+import {
+  resolveAppearancePreference,
+  resolveThemeFamilyId,
+} from "@/services/themes";
 
 export default function App() {
   const root = useWorkspaceStore((s) => s.root);
@@ -17,7 +21,10 @@ export default function App() {
   const activeTab = useTabsStore(selectActiveTab);
   const readerMode = useUIStore((s) => s.readerMode);
   const toggleReaderMode = useUIStore((s) => s.toggleReaderMode);
-  const themePreference = useUIStore((s) => s.themePreference);
+  const lightThemeFamily = useUIStore((s) => s.lightThemeFamily);
+  const darkThemeFamily = useUIStore((s) => s.darkThemeFamily);
+  const appearancePreference = useUIStore((s) => s.appearancePreference);
+  const themePreviewAppearance = useUIStore((s) => s.themePreviewAppearance);
   const toggleViewMode = useUIStore((s) => s.toggleViewMode);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -29,24 +36,34 @@ export default function App() {
     }
   }, [root, refreshTree]);
 
-  // Theme application — explicit override takes precedence, otherwise follow OS.
+  // Theme application — settings preview can temporarily force light/dark.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
-      const theme =
-        themePreference === "system"
-          ? mq.matches
-            ? "dark"
-            : "light"
-          : themePreference;
-      document.documentElement.setAttribute("data-theme", theme);
+      const appearance =
+        themePreviewAppearance ??
+        resolveAppearancePreference(appearancePreference, mq.matches);
+      const themeFamily = resolveThemeFamilyId(
+        appearance,
+        lightThemeFamily,
+        darkThemeFamily,
+      );
+      document.documentElement.setAttribute("data-theme", appearance);
+      document.documentElement.setAttribute("data-appearance", appearance);
+      document.documentElement.setAttribute("data-theme-family", themeFamily);
+      document.documentElement.style.colorScheme = appearance;
     };
     apply();
-    if (themePreference === "system") {
+    if (appearancePreference === "system" && !themePreviewAppearance) {
       mq.addEventListener("change", apply);
       return () => mq.removeEventListener("change", apply);
     }
-  }, [themePreference]);
+  }, [
+    appearancePreference,
+    darkThemeFamily,
+    lightThemeFamily,
+    themePreviewAppearance,
+  ]);
 
   // Default body font
   useEffect(() => {

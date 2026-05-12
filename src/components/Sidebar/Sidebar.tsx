@@ -6,19 +6,19 @@
 import { useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { useUIStore, type ThemePreference } from "@/stores/ui";
+import { useUIStore, type AppearancePreference } from "@/stores/ui";
 import { FileTree } from "./FileTree";
 
-const THEME_ICON: Record<ThemePreference, string> = {
+const THEME_ICON: Record<AppearancePreference, string> = {
   system: "◐",
   light: "☀",
   dark: "☾",
 };
 
-const THEME_TITLE: Record<ThemePreference, string> = {
-  system: "Theme: follows system (click for light)",
-  light: "Theme: light (click for dark)",
-  dark: "Theme: dark (click for system)",
+const THEME_TITLE: Record<AppearancePreference, string> = {
+  system: "Appearance: follows system (click for light)",
+  light: "Appearance: light (click for dark)",
+  dark: "Appearance: dark (click for system)",
 };
 
 interface SidebarProps {
@@ -29,8 +29,8 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
   const root = useWorkspaceStore((s) => s.root);
   const openWorkspace = useWorkspaceStore((s) => s.openWorkspace);
   const refreshTree = useWorkspaceStore((s) => s.refreshTree);
-  const themePreference = useUIStore((s) => s.themePreference);
-  const cycleTheme = useUIStore((s) => s.cycleTheme);
+  const appearancePreference = useUIStore((s) => s.appearancePreference);
+  const cycleAppearance = useUIStore((s) => s.cycleAppearance);
 
   const onOpen = useCallback(async () => {
     const result = await open({
@@ -54,11 +54,11 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
         <div className="sidebar-actions">
           <button
             className="sidebar-action"
-            onClick={cycleTheme}
-            title={THEME_TITLE[themePreference]}
-            aria-label={THEME_TITLE[themePreference]}
+            onClick={cycleAppearance}
+            title={THEME_TITLE[appearancePreference]}
+            aria-label={THEME_TITLE[appearancePreference]}
           >
-            {THEME_ICON[themePreference]}
+            {THEME_ICON[appearancePreference]}
           </button>
           {root && (
             <button
