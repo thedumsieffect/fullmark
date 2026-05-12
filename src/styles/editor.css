@@ -300,56 +300,56 @@
 .tiptap .hljs-built_in,
 .tiptap .hljs-literal,
 .tiptap .hljs-selector-tag {
-  color: var(--hl-keyword);
+  color: var(--hl-keyword, var(--accent));
 }
 .tiptap .hljs-string,
 .tiptap .hljs-regexp,
 .tiptap .hljs-template-tag,
 .tiptap .hljs-template-variable {
-  color: var(--hl-string);
+  color: var(--hl-string, color-mix(in oklab, var(--accent) 70%, green));
 }
 .tiptap .hljs-number {
-  color: var(--hl-number);
+  color: var(--hl-number, var(--accent));
 }
 .tiptap .hljs-comment,
 .tiptap .hljs-quote {
-  color: var(--hl-comment);
+  color: var(--hl-comment, var(--text-faint));
   font-style: italic;
 }
 .tiptap .hljs-function,
 .tiptap .hljs-title,
 .tiptap .hljs-title.function_ {
-  color: var(--hl-function);
+  color: var(--hl-function, color-mix(in oklab, var(--accent) 70%, blue));
 }
 .tiptap .hljs-type,
 .tiptap .hljs-class .hljs-title,
 .tiptap .hljs-title.class_ {
-  color: var(--hl-type);
+  color: var(--hl-type, color-mix(in oklab, var(--accent) 60%, teal));
 }
 .tiptap .hljs-variable,
 .tiptap .hljs-params {
-  color: var(--hl-variable);
+  color: var(--hl-variable, var(--text));
 }
 .tiptap .hljs-meta,
 .tiptap .hljs-doctag {
-  color: var(--hl-meta);
+  color: var(--hl-meta, var(--text-muted));
 }
 .tiptap .hljs-attr,
 .tiptap .hljs-attribute,
 .tiptap .hljs-property {
-  color: var(--hl-attr);
+  color: var(--hl-attr, var(--accent));
 }
 .tiptap .hljs-tag,
 .tiptap .hljs-name {
-  color: var(--hl-tag);
+  color: var(--hl-tag, color-mix(in oklab, var(--accent) 70%, red));
 }
 .tiptap .hljs-section {
-  color: var(--hl-section);
+  color: var(--hl-section, color-mix(in oklab, var(--accent) 70%, red));
   font-weight: 600;
 }
 .tiptap .hljs-bullet,
 .tiptap .hljs-link {
-  color: var(--hl-bullet);
+  color: var(--hl-bullet, color-mix(in oklab, var(--accent) 70%, blue));
 }
 .tiptap .hljs-strong {
   font-weight: 700;
@@ -358,8 +358,8 @@
   font-style: italic;
 }
 .tiptap .hljs-deletion {
-  background: var(--hl-deletion-bg);
+  background: var(--hl-deletion-bg, color-mix(in oklab, red 12%, transparent));
 }
 .tiptap .hljs-addition {
-  background: var(--hl-addition-bg);
+  background: var(--hl-addition-bg, color-mix(in oklab, green 12%, transparent));
 }
