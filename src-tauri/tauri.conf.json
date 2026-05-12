@@ -42,6 +42,9 @@
         "description": "Markdown Document",
         "role": "Editor"
       }
-    ]
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }
