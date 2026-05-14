@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DMG_DIR="$ROOT_DIR/src-tauri/target/release/bundle/dmg"
 APP_NAME="FullMark"
 INSTALL_DIR="/Applications"
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
 assume_yes=0
 skip_deps=0
@@ -161,6 +162,11 @@ install_app_from_dmg() {
 
   cleanup_active_mount
   echo "Installed: $target_path"
+
+  if [[ -x "$LSREGISTER" ]]; then
+    echo "Registering $target_path with Launch Services"
+    "$LSREGISTER" -f "$target_path" >/dev/null 2>&1 || true
+  fi
 }
 
 cd "$ROOT_DIR"

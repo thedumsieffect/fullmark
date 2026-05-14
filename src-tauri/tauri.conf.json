@@ -38,9 +38,16 @@
     "fileAssociations": [
       {
         "ext": ["md", "mdx", "markdown"],
+        "contentTypes": [
+          "net.daringfireball.markdown",
+          "public.markdown",
+          "public.plain-text"
+        ],
+        "mimeType": "text/markdown",
         "name": "Markdown",
         "description": "Markdown Document",
-        "role": "Editor"
+        "role": "Editor",
+        "rank": "Default"
       }
     ],
     "macOS": {

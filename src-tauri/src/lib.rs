@@ -19,6 +19,11 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
+    #[cfg(target_os = "macos")]
+    if let Err(err) = commands::launch_services::register_current_app() {
+        eprintln!("failed to register FullMark with Launch Services: {err}");
+    }
+
     app.run(|app_handle, event| {
         if let RunEvent::Opened { urls } = event {
             // Convert any "Open With FullMark" file URLs into plain paths and

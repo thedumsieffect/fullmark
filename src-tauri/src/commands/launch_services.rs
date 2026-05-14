@@ -10,7 +10,9 @@
 #[cfg(target_os = "macos")]
 mod imp {
     use core_foundation::base::TCFType;
+    use core_foundation::bundle::CFBundle;
     use core_foundation::string::{CFString, CFStringRef};
+    use core_foundation::url::CFURLRef;
 
     const BUNDLE_ID: &str = "app.fullmark.desktop";
 
@@ -37,6 +39,21 @@ mod imp {
             in_content_type: CFStringRef,
             in_role: u32,
         ) -> CFStringRef;
+
+        fn LSRegisterURL(in_url: CFURLRef, in_update: u8) -> i32;
+    }
+
+    pub fn register_current_app() -> Result<(), String> {
+        let bundle_url = CFBundle::main_bundle()
+            .bundle_url()
+            .ok_or_else(|| "could not locate the current app bundle".to_string())?;
+        let status = unsafe { LSRegisterURL(bundle_url.as_concrete_TypeRef(), 1) };
+
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(format!("LSRegisterURL failed (status {status})"))
+        }
     }
 
     pub fn set_default_markdown_handler() -> Result<(), String> {
@@ -94,6 +111,9 @@ mod imp {
 
 #[cfg(not(target_os = "macos"))]
 mod imp {
+    pub fn register_current_app() -> Result<(), String> {
+        Ok(())
+    }
     pub fn set_default_markdown_handler() -> Result<(), String> {
         Err("Setting the default handler is only supported on macOS".to_string())
     }
@@ -103,6 +123,10 @@ mod imp {
     pub fn is_default_markdown_handler() -> bool {
         false
     }
+}
+
+pub fn register_current_app() -> Result<(), String> {
+    imp::register_current_app()
 }
 
 #[tauri::command]
