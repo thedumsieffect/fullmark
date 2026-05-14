@@ -209,8 +209,10 @@ export default function App() {
   if (!root) {
     return (
       <div className="app app-empty">
-        <header className="app-titlebar" data-tauri-drag-region>
-          <span className="app-title">FullMark</span>
+        <header className="app-titlebar" data-tauri-drag-region="deep">
+          <span className="app-title" data-tauri-drag-region="true">
+            FullMark
+          </span>
         </header>
         <Welcome />
       </div>
@@ -223,10 +225,11 @@ export default function App() {
   // remount the ProseMirror instance, which froze the UI on large files.
   return (
     <div className={`app app-workspace${readerMode ? " app-reader" : ""}`}>
-      <header className="app-titlebar" data-tauri-drag-region>
-        <div className="app-titlebar-left">
+      <header className="app-titlebar" data-tauri-drag-region="deep">
+        <div className="app-titlebar-left" data-tauri-drag-region="true">
           <button
             className="titlebar-sidebar-toggle"
+            data-tauri-drag-region="false"
             onClick={toggleSidebarCollapsed}
             title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
             aria-label={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
@@ -234,19 +237,26 @@ export default function App() {
             {sidebarCollapsed ? "☰" : "◧"}
           </button>
         </div>
-        <span className="app-title">
+        <span className="app-title" data-tauri-drag-region="true">
           {activeTab ? stripExt(activeTab.name) : "FullMark"}
           {readerMode && (
-            <span className="app-title-mode">  ·  Reader</span>
+            <span className="app-title-mode" data-tauri-drag-region="true">
+              {" "}
+              · Reader
+            </span>
           )}
           {!readerMode && activeTab?.dirty && (
-            <span className="app-title-dirty" aria-label="unsaved">
+            <span
+              className="app-title-dirty"
+              data-tauri-drag-region="true"
+              aria-label="unsaved"
+            >
               {" "}
               •
             </span>
           )}
         </span>
-        <div className="app-titlebar-right">
+        <div className="app-titlebar-right" data-tauri-drag-region="true">
           {activeTab && !readerMode && <ViewToggle />}
         </div>
       </header>
