@@ -12,6 +12,11 @@ export type { AppearancePreference, ResolvedAppearance, ThemeFamilyId };
 
 export type ViewMode = "rendered" | "source";
 
+export const SIDEBAR_DEFAULT_WIDTH = 260;
+export const SIDEBAR_MIN_WIDTH = 180;
+export const SIDEBAR_MAX_WIDTH = 520;
+export const SIDEBAR_COLLAPSE_THRESHOLD = 96;
+
 type UIState = {
   readerMode: boolean;
   lightThemeFamily: ThemeFamilyId;
@@ -19,6 +24,8 @@ type UIState = {
   appearancePreference: AppearancePreference;
   themePreviewAppearance: ResolvedAppearance | null;
   viewMode: ViewMode;
+  sidebarWidth: number;
+  sidebarCollapsed: boolean;
   toggleReaderMode: () => void;
   setReaderMode: (v: boolean) => void;
   cycleAppearance: () => void;
@@ -28,6 +35,9 @@ type UIState = {
   setThemePreviewAppearance: (t: ResolvedAppearance | null) => void;
   toggleViewMode: () => void;
   setViewMode: (v: ViewMode) => void;
+  setSidebarWidth: (width: number) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
 };
 
 const NEXT_APPEARANCE: Record<AppearancePreference, AppearancePreference> = {
@@ -38,6 +48,13 @@ const NEXT_APPEARANCE: Record<AppearancePreference, AppearancePreference> = {
 
 function isViewMode(value: unknown): value is ViewMode {
   return value === "rendered" || value === "source";
+}
+
+function clampSidebarWidth(width: unknown): number {
+  if (typeof width !== "number" || !Number.isFinite(width)) {
+    return SIDEBAR_DEFAULT_WIDTH;
+  }
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
 }
 
 type PersistedUIState = Partial<UIState> & {
@@ -68,6 +85,8 @@ function sanitizePersistedUIState(
         : "system",
     themePreviewAppearance: null,
     viewMode: isViewMode(state.viewMode) ? state.viewMode : "rendered",
+    sidebarWidth: clampSidebarWidth(state.sidebarWidth),
+    sidebarCollapsed: state.sidebarCollapsed ?? false,
   };
 }
 
@@ -80,6 +99,8 @@ export const useUIStore = create<UIState>()(
       appearancePreference: "system",
       themePreviewAppearance: null,
       viewMode: "rendered",
+      sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
+      sidebarCollapsed: false,
       toggleReaderMode: () => set((s) => ({ readerMode: !s.readerMode })),
       setReaderMode: (v) => set({ readerMode: v }),
       cycleAppearance: () =>
@@ -95,10 +116,18 @@ export const useUIStore = create<UIState>()(
           viewMode: s.viewMode === "rendered" ? "source" : "rendered",
         })),
       setViewMode: (v) => set({ viewMode: v }),
+      setSidebarWidth: (width) =>
+        set({
+          sidebarWidth: clampSidebarWidth(width),
+          sidebarCollapsed: false,
+        }),
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      toggleSidebarCollapsed: () =>
+        set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),
     {
       name: "fullmark.ui",
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
         return persisted as UIState;
       },
@@ -115,6 +144,8 @@ export const useUIStore = create<UIState>()(
         darkThemeFamily: state.darkThemeFamily,
         appearancePreference: state.appearancePreference,
         viewMode: state.viewMode,
+        sidebarWidth: state.sidebarWidth,
+        sidebarCollapsed: state.sidebarCollapsed,
       }),
     },
   ),

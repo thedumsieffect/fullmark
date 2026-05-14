@@ -3,10 +3,17 @@
  * file tree (markdown files only — no toggle).
  */
 
-import { useCallback } from "react";
+import { useCallback, type KeyboardEvent, type PointerEvent } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useWorkspaceStore } from "@/stores/workspace";
-import { useUIStore, type AppearancePreference } from "@/stores/ui";
+import {
+  SIDEBAR_COLLAPSE_THRESHOLD,
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+  useUIStore,
+  type AppearancePreference,
+} from "@/stores/ui";
 import { FileTree } from "./FileTree";
 
 const THEME_ICON: Record<AppearancePreference, string> = {
@@ -31,6 +38,9 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
   const refreshTree = useWorkspaceStore((s) => s.refreshTree);
   const appearancePreference = useUIStore((s) => s.appearancePreference);
   const cycleAppearance = useUIStore((s) => s.cycleAppearance);
+  const sidebarWidth = useUIStore((s) => s.sidebarWidth);
+  const setSidebarWidth = useUIStore((s) => s.setSidebarWidth);
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
 
   const onOpen = useCallback(async () => {
     const result = await open({
@@ -42,6 +52,66 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
       await openWorkspace(result);
     }
   }, [openWorkspace]);
+
+  const beginResize = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = useUIStore.getState().sidebarWidth;
+
+      document.documentElement.classList.add("is-resizing-sidebar");
+
+      const finishResize = () => {
+        document.documentElement.classList.remove("is-resizing-sidebar");
+        window.removeEventListener("pointermove", resize);
+        window.removeEventListener("pointerup", finishResize);
+        window.removeEventListener("pointercancel", finishResize);
+      };
+
+      const resize = (moveEvent: globalThis.PointerEvent) => {
+        const nextWidth = startWidth + moveEvent.clientX - startX;
+        if (nextWidth <= SIDEBAR_COLLAPSE_THRESHOLD) {
+          setSidebarCollapsed(true);
+          finishResize();
+          return;
+        }
+        setSidebarWidth(nextWidth);
+      };
+
+      window.addEventListener("pointermove", resize);
+      window.addEventListener("pointerup", finishResize);
+      window.addEventListener("pointercancel", finishResize);
+    },
+    [setSidebarCollapsed, setSidebarWidth],
+  );
+
+  const onResizeKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      const step = event.shiftKey ? 40 : 16;
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        const nextWidth = sidebarWidth - step;
+        if (nextWidth <= SIDEBAR_COLLAPSE_THRESHOLD) {
+          setSidebarCollapsed(true);
+        } else {
+          setSidebarWidth(nextWidth);
+        }
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setSidebarWidth(sidebarWidth + step);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setSidebarWidth(SIDEBAR_MIN_WIDTH);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setSidebarWidth(SIDEBAR_MAX_WIDTH);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        setSidebarCollapsed(true);
+      }
+    },
+    [setSidebarCollapsed, setSidebarWidth, sidebarWidth],
+  );
 
   const workspaceName = root ? root.split("/").pop() || root : null;
 
@@ -86,11 +156,32 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
               ⚙
             </button>
           )}
+          <button
+            className="sidebar-action"
+            onClick={() => setSidebarCollapsed(true)}
+            title="Hide sidebar"
+            aria-label="Hide sidebar"
+          >
+            ◀
+          </button>
         </div>
       </header>
       <div className="sidebar-tree">
         <FileTree />
       </div>
+      <div
+        className="sidebar-resizer"
+        role="separator"
+        aria-label="Resize sidebar"
+        aria-orientation="vertical"
+        aria-valuemin={SIDEBAR_MIN_WIDTH}
+        aria-valuemax={SIDEBAR_MAX_WIDTH}
+        aria-valuenow={Math.round(sidebarWidth)}
+        tabIndex={0}
+        onPointerDown={beginResize}
+        onDoubleClick={() => setSidebarWidth(SIDEBAR_DEFAULT_WIDTH)}
+        onKeyDown={onResizeKeyDown}
+      />
     </aside>
   );
 }
