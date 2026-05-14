@@ -1,13 +1,29 @@
 mod commands;
 
+use std::sync::Mutex;
+
 use tauri::{Emitter, Manager, RunEvent};
+
+#[derive(Default)]
+struct PendingOpenFiles(Mutex<Vec<String>>);
+
+#[tauri::command]
+fn take_pending_open_files(pending: tauri::State<'_, PendingOpenFiles>) -> Vec<String> {
+    let mut paths = pending
+        .0
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    std::mem::take(&mut *paths)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        .manage(PendingOpenFiles::default())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            take_pending_open_files,
             commands::fs::atomic_write_text,
             commands::fs::list_dir,
             commands::fs::read_text_file,
@@ -36,7 +52,13 @@ pub fn run() {
                 .collect();
 
             if !paths.is_empty() {
-                let _ = app_handle.emit("open-files", paths);
+                let pending = app_handle.state::<PendingOpenFiles>();
+                pending
+                    .0
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .extend(paths);
+                let _ = app_handle.emit("open-files", ());
                 if let Some(win) = app_handle.get_webview_window("main") {
                     let _ = win.set_focus();
                 }

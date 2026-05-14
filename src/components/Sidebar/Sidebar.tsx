@@ -139,13 +139,6 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
               ↻
             </button>
           )}
-          <button
-            className="sidebar-action"
-            onClick={() => void onOpen()}
-            title="Open folder…"
-          >
-            ⤴
-          </button>
           {onOpenSettings && (
             <button
               className="sidebar-action"
@@ -169,6 +162,11 @@ export function Sidebar({ onOpenSettings }: SidebarProps = {}) {
       <div className="sidebar-tree">
         <FileTree />
       </div>
+      <footer className="sidebar-footer">
+        <button className="sidebar-toggle" onClick={() => void onOpen()}>
+          Change folder…
+        </button>
+      </footer>
       <div
         className="sidebar-resizer"
         role="separator"
