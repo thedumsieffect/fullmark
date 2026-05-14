@@ -14,6 +14,7 @@ export function ViewToggle() {
       <button
         type="button"
         className={`view-toggle-btn ${viewMode === "rendered" ? "view-toggle-active" : ""}`}
+        data-tauri-drag-region="false"
         onClick={() => setViewMode("rendered")}
         aria-pressed={viewMode === "rendered"}
         title="Rendered view"
@@ -23,6 +24,7 @@ export function ViewToggle() {
       <button
         type="button"
         className={`view-toggle-btn ${viewMode === "source" ? "view-toggle-active" : ""}`}
+        data-tauri-drag-region="false"
         onClick={() => setViewMode("source")}
         aria-pressed={viewMode === "source"}
         title="Source view (raw markdown) — ⌘⇧M"
