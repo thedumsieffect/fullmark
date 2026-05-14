@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TabBar } from "@/components/Tabs/TabBar";
@@ -26,6 +26,9 @@ export default function App() {
   const appearancePreference = useUIStore((s) => s.appearancePreference);
   const themePreviewAppearance = useUIStore((s) => s.themePreviewAppearance);
   const toggleViewMode = useUIStore((s) => s.toggleViewMode);
+  const sidebarWidth = useUIStore((s) => s.sidebarWidth);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -191,7 +194,16 @@ export default function App() {
   return (
     <div className={`app app-workspace${readerMode ? " app-reader" : ""}`}>
       <header className="app-titlebar" data-tauri-drag-region>
-        <div className="app-titlebar-left" />
+        <div className="app-titlebar-left">
+          <button
+            className="titlebar-sidebar-toggle"
+            onClick={toggleSidebarCollapsed}
+            title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+            aria-label={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+          >
+            {sidebarCollapsed ? "☰" : "◧"}
+          </button>
+        </div>
         <span className="app-title">
           {activeTab ? stripExt(activeTab.name) : "FullMark"}
           {readerMode && (
@@ -208,8 +220,13 @@ export default function App() {
           {activeTab && !readerMode && <ViewToggle />}
         </div>
       </header>
-      <div className="app-body">
-        <Sidebar onOpenSettings={() => setSettingsOpen(true)} />
+      <div
+        className={`app-body${sidebarCollapsed ? " app-body-sidebar-collapsed" : ""}`}
+        style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
+      >
+        {!sidebarCollapsed && (
+          <Sidebar onOpenSettings={() => setSettingsOpen(true)} />
+        )}
         <main className="app-main">
           <TabBar />
           <EditorPane />

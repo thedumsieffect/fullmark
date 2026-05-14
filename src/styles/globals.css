@@ -56,7 +56,10 @@ button {
 
 .app-titlebar-left {
   /* reserves the traffic-light area */
-  width: 80px;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  padding-left: 72px;
 }
 
 .app-titlebar-right {
@@ -78,11 +81,36 @@ button {
   margin-left: 2px;
 }
 
+.titlebar-sidebar-toggle {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  padding: 0;
+}
+
+.titlebar-sidebar-toggle:hover,
+.titlebar-sidebar-toggle:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+  outline: none;
+}
+
 .app-body {
   display: flex;
   flex-direction: row;
   min-height: 0;
   overflow: hidden;
+}
+
+.app-body-sidebar-collapsed .app-main {
+  border-left: 1px solid var(--border);
 }
 
 .app-main {
@@ -95,7 +123,7 @@ button {
 
 /* -- Sidebar -- */
 .sidebar {
-  width: 260px;
+  width: var(--sidebar-width, 260px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -103,6 +131,7 @@ button {
   border-right: 1px solid var(--border);
   font-family: var(--ui-family);
   font-size: 13px;
+  position: relative;
 }
 
 .sidebar-header {
@@ -146,6 +175,11 @@ button {
   color: var(--accent);
 }
 
+.sidebar-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .sidebar-tree {
   flex: 1;
   overflow-y: auto;
@@ -171,6 +205,44 @@ button {
   background: var(--accent-soft);
   color: var(--accent);
   border-color: var(--accent-soft);
+}
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  z-index: 5;
+  touch-action: none;
+}
+
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.is-resizing-sidebar .sidebar-resizer::after {
+  background: var(--accent);
+}
+
+.sidebar-resizer:focus-visible {
+  outline: none;
+}
+
+.is-resizing-sidebar,
+.is-resizing-sidebar * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 /* -- File tree rows -- */
