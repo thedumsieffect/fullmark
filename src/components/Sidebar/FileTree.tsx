@@ -8,7 +8,8 @@
 
 import { useState, useCallback } from "react";
 import type { TreeNode } from "@/services/fs-bridge";
-import { useTabsStore } from "@/stores/tabs";
+import { basename, isPathInsideRoot, stripMarkdownExt } from "@/services/path-utils";
+import { useTabsStore, type Tab } from "@/stores/tabs";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 interface RowProps {
@@ -37,7 +38,7 @@ function FileRow({ node, depth }: RowProps) {
       style={{ paddingLeft: depth * 14 + 12 }}
       title={node.path}
     >
-      <span className="tree-row-name">{stripExt(node.name)}</span>
+      <span className="tree-row-name">{stripMarkdownExt(node.name)}</span>
       {isDirty && <span className="tree-row-dirty">●</span>}
     </div>
   );
@@ -72,18 +73,48 @@ function DirRow({ node, depth }: RowProps) {
   );
 }
 
-function stripExt(name: string): string {
-  const idx = name.lastIndexOf(".");
-  if (idx <= 0) return name;
-  const ext = name.slice(idx).toLowerCase();
-  if (ext === ".md" || ext === ".mdx" || ext === ".markdown")
-    return name.slice(0, idx);
-  return name;
+interface LooseFileRowProps {
+  tab: Tab;
+}
+
+function LooseFileRow({ tab }: LooseFileRowProps) {
+  const activePath = useTabsStore((s) => s.activePath);
+  const switchTo = useTabsStore((s) => s.switchTo);
+  const closeTab = useTabsStore((s) => s.closeTab);
+  const isActive = activePath === tab.path;
+
+  return (
+    <div
+      role="treeitem"
+      aria-selected={isActive}
+      className={`tree-row loose-file-row ${isActive ? "tree-row-active" : ""}`}
+      title={tab.path}
+      onClick={() => switchTo(tab.path)}
+    >
+      <span className="tree-row-name">{stripMarkdownExt(basename(tab.path))}</span>
+      {tab.dirty && <span className="tree-row-dirty">●</span>}
+      <button
+        className="loose-file-close"
+        onClick={(event) => {
+          event.stopPropagation();
+          closeTab(tab.path);
+        }}
+        aria-label={`Close ${basename(tab.path)}`}
+        title="Close loose file"
+      >
+        ×
+      </button>
+    </div>
+  );
 }
 
 export function FileTree() {
   const tree = useWorkspaceStore((s) => s.tree);
+  const root = useWorkspaceStore((s) => s.root);
   const loading = useWorkspaceStore((s) => s.loadingTree);
+  const tabs = useTabsStore((s) => s.tabs);
+  const looseTabs = tabs.filter((tab) => !isPathInsideRoot(tab.path, root));
+  const hasWorkspaceFiles = Boolean(tree?.children?.length);
 
   if (loading && !tree) {
     return <div className="tree-empty">Loading…</div>;
@@ -91,7 +122,7 @@ export function FileTree() {
   if (!tree) {
     return null;
   }
-  if (!tree.children || tree.children.length === 0) {
+  if (!hasWorkspaceFiles && looseTabs.length === 0) {
     return (
       <div className="tree-empty">
         No markdown files in this folder.
@@ -103,12 +134,26 @@ export function FileTree() {
 
   return (
     <div role="tree" className="tree">
-      {tree.children.map((child) =>
-        child.isDir ? (
-          <DirRow key={child.path} node={child} depth={0} />
-        ) : (
-          <FileRow key={child.path} node={child} depth={0} />
-        ),
+      {hasWorkspaceFiles ? (
+        tree.children?.map((child) =>
+          child.isDir ? (
+            <DirRow key={child.path} node={child} depth={0} />
+          ) : (
+            <FileRow key={child.path} node={child} depth={0} />
+          ),
+        )
+      ) : (
+        <div className="tree-empty tree-empty-compact">
+          No markdown files in this folder.
+        </div>
+      )}
+      {looseTabs.length > 0 && (
+        <div className="loose-files" role="group" aria-label="Loose files">
+          <div className="tree-section-title">Loose files</div>
+          {looseTabs.map((tab) => (
+            <LooseFileRow key={tab.path} tab={tab} />
+          ))}
+        </div>
       )}
     </div>
   );

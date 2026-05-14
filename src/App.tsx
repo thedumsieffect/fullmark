@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Sidebar } from "@/components/Sidebar/Sidebar";
 import { TabBar } from "@/components/Tabs/TabBar";
@@ -14,6 +15,40 @@ import {
   resolveAppearancePreference,
   resolveThemeFamilyId,
 } from "@/services/themes";
+import { dirname } from "@/services/path-utils";
+
+let externalOpenQueue = Promise.resolve();
+
+function enqueueExternalFiles(paths: string[]): Promise<void> {
+  externalOpenQueue = externalOpenQueue.then(
+    () => openExternalFiles(paths),
+    () => openExternalFiles(paths),
+  );
+  return externalOpenQueue;
+}
+
+async function openExternalFiles(paths: string[]): Promise<void> {
+  const uniquePaths = Array.from(new Set(paths)).filter(Boolean);
+  if (uniquePaths.length === 0) return;
+
+  const workspace = useWorkspaceStore.getState();
+  if (!workspace.root) {
+    try {
+      await workspace.openWorkspace(dirname(uniquePaths[0]));
+    } catch (e) {
+      console.error("Failed to open workspace from file:", e);
+    }
+  }
+
+  const tabs = useTabsStore.getState();
+  for (const path of uniquePaths) {
+    try {
+      await tabs.openFile(path);
+    } catch (e) {
+      console.error(`Failed to open ${path}:`, e);
+    }
+  }
+}
 
 export default function App() {
   const root = useWorkspaceStore((s) => s.root);
@@ -143,35 +178,30 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleViewMode]);
 
-  // "Open With FullMark" handler
+  // "Open With FullMark" handler. Rust queues paths because Finder can launch
+  // the app before this listener exists; this effect drains the queue once the
+  // frontend is ready and again whenever Rust signals new paths.
   useEffect(() => {
-    const unlistenP = listen<string[]>("open-files", async (event) => {
-      const paths = event.payload ?? [];
-      if (paths.length === 0) return;
-      const ws = useWorkspaceStore.getState();
-      if (!ws.root) {
-        const firstPath = paths[0];
-        const sep = Math.max(
-          firstPath.lastIndexOf("/"),
-          firstPath.lastIndexOf("\\"),
-        );
-        const parentDir = sep > 0 ? firstPath.slice(0, sep) : firstPath;
-        try {
-          await ws.openWorkspace(parentDir);
-        } catch (e) {
-          console.error("Failed to open workspace from file:", e);
-        }
+    let cancelled = false;
+    const drainPendingOpenFiles = async () => {
+      try {
+        const paths = await invoke<string[]>("take_pending_open_files");
+        if (!cancelled) await enqueueExternalFiles(paths);
+      } catch (e) {
+        console.error("Failed to read pending open files:", e);
       }
-      const tabs = useTabsStore.getState();
-      for (const path of paths) {
-        try {
-          await tabs.openFile(path);
-        } catch (e) {
-          console.error(`Failed to open ${path}:`, e);
-        }
-      }
+    };
+
+    const unlistenP = listen("open-files", () => {
+      void drainPendingOpenFiles();
     });
+    void unlistenP.then(
+      () => drainPendingOpenFiles(),
+      (e) => console.error("Failed to listen for opened files:", e),
+    );
+
     return () => {
+      cancelled = true;
       void unlistenP.then((fn) => fn());
     };
   }, []);
