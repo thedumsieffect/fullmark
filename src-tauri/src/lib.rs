@@ -22,12 +22,14 @@ pub fn run() {
         .manage(PendingOpenFiles::default())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             take_pending_open_files,
             commands::fs::atomic_write_text,
             commands::fs::list_dir,
             commands::fs::read_text_file,
             commands::fs::resolve_path,
+            commands::fs::walk_workspace,
             commands::launch_services::set_default_markdown_handler,
             commands::launch_services::get_default_markdown_handler,
             commands::launch_services::is_default_markdown_handler,

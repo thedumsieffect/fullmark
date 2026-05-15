@@ -50,10 +50,15 @@ async function openExternalFiles(paths: string[]): Promise<void> {
   }
 }
 
+function isTauriRuntime(): boolean {
+  return "__TAURI_INTERNALS__" in window;
+}
+
 export default function App() {
   const root = useWorkspaceStore((s) => s.root);
   const refreshTree = useWorkspaceStore((s) => s.refreshTree);
   const activeTab = useTabsStore(selectActiveTab);
+  const restoreTabSession = useTabsStore((s) => s.restoreSession);
   const readerMode = useUIStore((s) => s.readerMode);
   const toggleReaderMode = useUIStore((s) => s.toggleReaderMode);
   const lightThemeFamily = useUIStore((s) => s.lightThemeFamily);
@@ -73,6 +78,11 @@ export default function App() {
       void refreshTree();
     }
   }, [root, refreshTree]);
+
+  // Reopen the previous tab session from disk after persisted stores hydrate.
+  useEffect(() => {
+    void restoreTabSession();
+  }, [restoreTabSession]);
 
   // Theme application — settings preview can temporarily force light/dark.
   useEffect(() => {
@@ -122,19 +132,29 @@ export default function App() {
   // WebView's own handler.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "r") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === "r"
+      ) {
         e.preventDefault();
         e.stopPropagation();
         toggleReaderMode();
       }
       // Also block Cmd+Shift+R (hard reload) so it doesn't reload either.
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "r") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "r"
+      ) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
     window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", onKey, { capture: true });
   }, [toggleReaderMode]);
 
   // Cmd+K opens the quick switcher (requires a workspace; ignored otherwise)
@@ -182,6 +202,7 @@ export default function App() {
   // the app before this listener exists; this effect drains the queue once the
   // frontend is ready and again whenever Rust signals new paths.
   useEffect(() => {
+    if (!isTauriRuntime()) return;
     let cancelled = false;
     const drainPendingOpenFiles = async () => {
       try {
@@ -206,7 +227,7 @@ export default function App() {
     };
   }, []);
 
-  if (!root) {
+  if (!root && !activeTab) {
     return (
       <div className="app app-empty">
         <header className="app-titlebar" data-tauri-drag-region="deep">

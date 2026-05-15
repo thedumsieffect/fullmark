@@ -1,0 +1,127 @@
+name: Performance Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: performance-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  unit:
+    name: Unit Stability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/save-race.test.ts tests/workspace-race.test.ts
+
+  fidelity:
+    name: Markdown Fidelity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/fidelity-production.test.ts
+      - run: node scripts/fidelity-gate.mjs docs 10
+
+  perf-smoke:
+    name: Performance Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Check web asset budget
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const assetsDir = path.join(process.cwd(), "dist", "assets");
+          const maxAssetBytes = 1_500_000;
+          const assets = fs.existsSync(assetsDir)
+            ? fs.readdirSync(assetsDir).map((name) => path.join(assetsDir, name))
+            : [];
+          const oversized = assets
+            .map((file) => ({ file, size: fs.statSync(file).size }))
+            .filter(({ size }) => size > maxAssetBytes);
+          if (oversized.length > 0) {
+            console.error("Assets above 1.5MB smoke budget:");
+            for (const { file, size } of oversized) {
+              console.error(`${path.relative(process.cwd(), file)}: ${size} bytes`);
+            }
+            process.exit(1);
+          }
+          NODE
+
+  web-e2e:
+    name: Web E2E
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e:web
+
+  # Linux Tauri WebDriver notes:
+  # - Run this only on Linux images with webkit2gtk, xvfb, tauri-driver, and the
+  #   app bundle installed. The web smoke above intentionally does not exercise
+  #   native dialogs, filesystem permissions, or WebView focus behavior.
+  # - A future native lane should start `tauri-driver`, run the packaged app
+  #   under xvfb, then execute WebDriver specs against 127.0.0.1:4444.

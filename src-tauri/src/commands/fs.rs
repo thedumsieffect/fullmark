@@ -13,7 +13,10 @@ pub struct FsError {
 
 impl FsError {
     fn new(code: &str, msg: impl Into<String>) -> Self {
-        Self { code: code.into(), message: msg.into() }
+        Self {
+            code: code.into(),
+            message: msg.into(),
+        }
     }
 }
 
@@ -78,8 +81,16 @@ pub struct DirEntry {
     pub modified_ms: Option<u128>,
 }
 
-/// List immediate children of a directory. Single level only — recursive walk
-/// is handled in the frontend so it can stream + show progress for large vaults.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceEntry {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub parent: Option<usize>,
+}
+
+/// List immediate children of a directory. Single level only.
 #[tauri::command]
 pub fn list_dir(path: String) -> Result<Vec<DirEntry>, FsError> {
     let mut entries = Vec::new();
@@ -109,6 +120,134 @@ pub fn list_dir(path: String) -> Result<Vec<DirEntry>, FsError> {
     Ok(entries)
 }
 
+const MD_EXTENSIONS: [&str; 3] = ["md", "mdx", "markdown"];
+const ALWAYS_HIDE: [&str; 12] = [
+    ".git",
+    ".svn",
+    ".hg",
+    ".DS_Store",
+    ".editor",
+    ".obsidian",
+    "node_modules",
+    "dist",
+    "build",
+    "target",
+    ".next",
+    ".turbo",
+];
+
+fn is_hidden(name: &str) -> bool {
+    ALWAYS_HIDE.contains(&name) || name.starts_with('.')
+}
+
+fn is_markdown(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| MD_EXTENSIONS.contains(&ext.to_ascii_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
+fn sorted_workspace_children(
+    dir: &Path,
+    is_root: bool,
+) -> Result<Vec<(String, PathBuf, bool)>, FsError> {
+    let read_dir = match fs::read_dir(dir) {
+        Ok(read_dir) => read_dir,
+        Err(err) if is_root => return Err(err.into()),
+        Err(_) => return Ok(Vec::new()),
+    };
+
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+
+    for ent in read_dir {
+        let ent = match ent {
+            Ok(ent) => ent,
+            Err(_) => continue,
+        };
+        let name = ent.file_name().to_string_lossy().into_owned();
+        if is_hidden(&name) {
+            continue;
+        }
+
+        let path = ent.path();
+        let file_type = match ent.file_type() {
+            Ok(file_type) => file_type,
+            Err(_) => continue,
+        };
+
+        if file_type.is_dir() {
+            dirs.push((name, path, true));
+        } else if file_type.is_file() && is_markdown(&path) {
+            files.push((name, path, false));
+        }
+    }
+
+    dirs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    files.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    dirs.extend(files);
+    Ok(dirs)
+}
+
+fn walk_workspace_dir(
+    dir: &Path,
+    parent: usize,
+    entries: &mut Vec<WorkspaceEntry>,
+    is_root: bool,
+) -> Result<bool, FsError> {
+    let children = sorted_workspace_children(dir, is_root)?;
+    let mut has_markdown = false;
+
+    for (name, path, is_dir) in children {
+        if is_dir {
+            let idx = entries.len();
+            entries.push(WorkspaceEntry {
+                name,
+                path: path.to_string_lossy().into_owned(),
+                is_dir: true,
+                parent: Some(parent),
+            });
+
+            if walk_workspace_dir(&path, idx, entries, false)? {
+                has_markdown = true;
+            } else {
+                entries.truncate(idx);
+            }
+        } else {
+            entries.push(WorkspaceEntry {
+                name,
+                path: path.to_string_lossy().into_owned(),
+                is_dir: false,
+                parent: Some(parent),
+            });
+            has_markdown = true;
+        }
+    }
+
+    Ok(has_markdown)
+}
+
+/// Walk a workspace once in Rust, returning a compact flat tree containing only
+/// markdown files and directories that contain markdown descendants.
+#[tauri::command]
+pub fn walk_workspace(root: String) -> Result<Vec<WorkspaceEntry>, FsError> {
+    let root_path = PathBuf::from(&root);
+    let root_name = root_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(root.as_str())
+        .to_string();
+
+    let mut entries = vec![WorkspaceEntry {
+        name: root_name,
+        path: root_path.to_string_lossy().into_owned(),
+        is_dir: true,
+        parent: None,
+    }];
+    walk_workspace_dir(&root_path, 0, &mut entries, true)?;
+    Ok(entries)
+}
+
 /// Read a file as a UTF-8 string. Bytes that aren't valid UTF-8 are lossy-replaced.
 /// Returns the canonical path alongside the content so the frontend can
 /// reconcile case-insensitive filesystems.
@@ -133,7 +272,11 @@ pub fn read_text_file(path: String) -> Result<ReadResult, FsError> {
         .and_then(|md| md.modified().ok())
         .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
         .map(|d| d.as_millis());
-    Ok(ReadResult { content, canonical_path: canonical, modified_ms })
+    Ok(ReadResult {
+        content,
+        canonical_path: canonical,
+        modified_ms,
+    })
 }
 
 /// Resolve `~` and relative paths to an absolute path that the rest of the app
