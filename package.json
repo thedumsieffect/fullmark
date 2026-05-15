@@ -2,6 +2,7 @@
   "name": "fullmark",
   "private": true,
   "version": "0.1.5",
+  "packageManager": "pnpm@10.18.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
