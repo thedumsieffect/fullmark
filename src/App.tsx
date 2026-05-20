@@ -20,14 +20,22 @@ export default function App() {
   const refreshTree = useWorkspaceStore((s) => s.refreshTree);
   const activeTab = useTabsStore(selectActiveTab);
   const readerMode = useUIStore((s) => s.readerMode);
+  const readerZoom = useUIStore((s) => s.readerZoom);
   const toggleReaderMode = useUIStore((s) => s.toggleReaderMode);
+  const zoomReaderIn = useUIStore((s) => s.zoomReaderIn);
+  const zoomReaderOut = useUIStore((s) => s.zoomReaderOut);
+  const resetReaderZoom = useUIStore((s) => s.resetReaderZoom);
   const lightThemeFamily = useUIStore((s) => s.lightThemeFamily);
   const darkThemeFamily = useUIStore((s) => s.darkThemeFamily);
   const appearancePreference = useUIStore((s) => s.appearancePreference);
   const themePreviewAppearance = useUIStore((s) => s.themePreviewAppearance);
+  const viewMode = useUIStore((s) => s.viewMode);
   const toggleViewMode = useUIStore((s) => s.toggleViewMode);
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const zoomEnabled = Boolean(
+    activeTab && (readerMode || viewMode === "rendered"),
+  );
 
   // Restore workspace tree on launch
   useEffect(() => {
@@ -78,25 +86,100 @@ export default function App() {
     );
   }, [readerMode]);
 
+  // Rendered editor zoom behaves like browser zoom:
+  // Cmd/Ctrl +/- steps levels, 0 resets.
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--reader-zoom",
+      String(readerZoom),
+    );
+  }, [readerZoom]);
+
+  useEffect(() => {
+    if (!zoomEnabled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+
+      if (isZoomInKey(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        zoomReaderIn();
+        return;
+      }
+
+      if (isZoomOutKey(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        zoomReaderOut();
+        return;
+      }
+
+      if (isZoomResetKey(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        resetReaderZoom();
+      }
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", onKey, { capture: true });
+  }, [resetReaderZoom, zoomEnabled, zoomReaderIn, zoomReaderOut]);
+
+  useEffect(() => {
+    if (!zoomEnabled) return;
+    let lastZoomAt = 0;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const now = Date.now();
+      if (now - lastZoomAt < 120) return;
+      lastZoomAt = now;
+
+      if (e.deltaY < 0) {
+        zoomReaderIn();
+      } else if (e.deltaY > 0) {
+        zoomReaderOut();
+      }
+    };
+    window.addEventListener("wheel", onWheel, {
+      capture: true,
+      passive: false,
+    });
+    return () =>
+      window.removeEventListener("wheel", onWheel, { capture: true });
+  }, [zoomEnabled, zoomReaderIn, zoomReaderOut]);
+
   // Cmd+R toggles reader mode. Registered on the capture phase + with
   // preventDefault so WKWebView's default page-reload doesn't fire — that
   // was the source of the perceived "freeze". Capture phase runs before the
   // WebView's own handler.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "r") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.key.toLowerCase() === "r"
+      ) {
         e.preventDefault();
         e.stopPropagation();
         toggleReaderMode();
       }
       // Also block Cmd+Shift+R (hard reload) so it doesn't reload either.
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "r") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "r"
+      ) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
     window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", onKey, { capture: true });
   }, [toggleReaderMode]);
 
   // Cmd+K opens the quick switcher (requires a workspace; ignored otherwise)
@@ -195,7 +278,11 @@ export default function App() {
         <span className="app-title">
           {activeTab ? stripExt(activeTab.name) : "FullMark"}
           {readerMode && (
-            <span className="app-title-mode">  ·  Reader</span>
+            <span className="app-title-mode">
+              {" "}
+              · Reader
+              {readerZoom !== 1 ? ` ${formatReaderZoom(readerZoom)}` : ""}
+            </span>
           )}
           {!readerMode && activeTab?.dirty && (
             <span className="app-title-dirty" aria-label="unsaved">
@@ -205,6 +292,47 @@ export default function App() {
           )}
         </span>
         <div className="app-titlebar-right">
+          {zoomEnabled && (
+            <div
+              className="reader-zoom-controls"
+              role="group"
+              aria-label="Reader zoom"
+            >
+              <button
+                type="button"
+                className="reader-zoom-btn"
+                data-tauri-drag-region="false"
+                onClick={zoomReaderOut}
+                title="Zoom out"
+                aria-label="Zoom out"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                className="reader-zoom-value"
+                data-tauri-drag-region="false"
+                onClick={resetReaderZoom}
+                title="Reset zoom"
+                aria-label="Reset reader zoom"
+              >
+                <span className="reader-zoom-reset-icon" aria-hidden="true">
+                  ↺
+                </span>
+                <span>{formatReaderZoom(readerZoom)}</span>
+              </button>
+              <button
+                type="button"
+                className="reader-zoom-btn"
+                data-tauri-drag-region="false"
+                onClick={zoomReaderIn}
+                title="Zoom in"
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+            </div>
+          )}
           {activeTab && !readerMode && <ViewToggle />}
         </div>
       </header>
@@ -251,4 +379,20 @@ function stripExt(name: string): string {
   if (ext === ".md" || ext === ".mdx" || ext === ".markdown")
     return name.slice(0, idx);
   return name;
+}
+
+function isZoomInKey(e: KeyboardEvent): boolean {
+  return e.code === "Equal" || e.code === "NumpadAdd" || e.key === "+";
+}
+
+function isZoomOutKey(e: KeyboardEvent): boolean {
+  return e.code === "Minus" || e.code === "NumpadSubtract" || e.key === "-";
+}
+
+function isZoomResetKey(e: KeyboardEvent): boolean {
+  return e.code === "Digit0" || e.code === "Numpad0" || e.key === "0";
+}
+
+function formatReaderZoom(zoom: number): string {
+  return `${Math.round(zoom * 100)}%`;
 }
