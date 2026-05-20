@@ -103,6 +103,7 @@ pnpm tauri dev       # hot-reload window
 |---|---|
 | `Cmd+K` | Quick file switcher (fuzzy) |
 | `Cmd+R` | Toggle reader mode |
+| `Cmd++` / `Cmd+-` / `Cmd+0` | Zoom reader mode in / out / reset |
 | `Cmd+S` | Save current file |
 | `Cmd+T` / `Cmd+W` | New / close tab |
 | `Cmd+Shift+[` / `]` | Previous / next tab |

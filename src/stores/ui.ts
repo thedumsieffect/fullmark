@@ -12,8 +12,12 @@ export type { AppearancePreference, ResolvedAppearance, ThemeFamilyId };
 
 export type ViewMode = "rendered" | "source";
 
+const READER_ZOOM_LEVELS = [0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2];
+const DEFAULT_READER_ZOOM = 1;
+
 type UIState = {
   readerMode: boolean;
+  readerZoom: number;
   lightThemeFamily: ThemeFamilyId;
   darkThemeFamily: ThemeFamilyId;
   appearancePreference: AppearancePreference;
@@ -21,6 +25,9 @@ type UIState = {
   viewMode: ViewMode;
   toggleReaderMode: () => void;
   setReaderMode: (v: boolean) => void;
+  zoomReaderIn: () => void;
+  zoomReaderOut: () => void;
+  resetReaderZoom: () => void;
   cycleAppearance: () => void;
   setAppearancePreference: (t: AppearancePreference) => void;
   setLightThemeFamily: (t: ThemeFamilyId) => void;
@@ -40,6 +47,25 @@ function isViewMode(value: unknown): value is ViewMode {
   return value === "rendered" || value === "source";
 }
 
+function sanitizeReaderZoom(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_READER_ZOOM;
+  }
+  return READER_ZOOM_LEVELS.reduce((closest, level) =>
+    Math.abs(level - value) < Math.abs(closest - value) ? level : closest,
+  );
+}
+
+function stepReaderZoom(current: number, direction: -1 | 1): number {
+  const normalized = sanitizeReaderZoom(current);
+  const index = READER_ZOOM_LEVELS.indexOf(normalized);
+  const nextIndex = Math.min(
+    Math.max(index + direction, 0),
+    READER_ZOOM_LEVELS.length - 1,
+  );
+  return READER_ZOOM_LEVELS[nextIndex];
+}
+
 type PersistedUIState = Partial<UIState> & {
   themeFamily?: ThemeFamilyId;
   themePreference?: AppearancePreference;
@@ -55,6 +81,7 @@ function sanitizePersistedUIState(
   return {
     ...fallback,
     readerMode: state.readerMode ?? false,
+    readerZoom: sanitizeReaderZoom(state.readerZoom),
     lightThemeFamily: isThemeFamilyId(state.lightThemeFamily)
       ? state.lightThemeFamily
       : migratedThemeFamily,
@@ -75,6 +102,7 @@ export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
       readerMode: false,
+      readerZoom: DEFAULT_READER_ZOOM,
       lightThemeFamily: "fullmark",
       darkThemeFamily: "fullmark",
       appearancePreference: "system",
@@ -82,6 +110,11 @@ export const useUIStore = create<UIState>()(
       viewMode: "rendered",
       toggleReaderMode: () => set((s) => ({ readerMode: !s.readerMode })),
       setReaderMode: (v) => set({ readerMode: v }),
+      zoomReaderIn: () =>
+        set((s) => ({ readerZoom: stepReaderZoom(s.readerZoom, 1) })),
+      zoomReaderOut: () =>
+        set((s) => ({ readerZoom: stepReaderZoom(s.readerZoom, -1) })),
+      resetReaderZoom: () => set({ readerZoom: DEFAULT_READER_ZOOM }),
       cycleAppearance: () =>
         set((s) => ({
           appearancePreference: NEXT_APPEARANCE[s.appearancePreference],
@@ -98,7 +131,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "fullmark.ui",
-      version: 3,
+      version: 4,
       migrate: (persisted) => {
         return persisted as UIState;
       },
@@ -111,6 +144,7 @@ export const useUIStore = create<UIState>()(
       },
       partialize: (state) => ({
         readerMode: state.readerMode,
+        readerZoom: state.readerZoom,
         lightThemeFamily: state.lightThemeFamily,
         darkThemeFamily: state.darkThemeFamily,
         appearancePreference: state.appearancePreference,

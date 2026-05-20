@@ -306,10 +306,11 @@ button {
 }
 
 .editor-canvas .tiptap {
-  max-width: 720px;
+  max-width: min(calc(720px * var(--reader-zoom, 1)), calc(100vw - 64px));
   margin: 0 auto;
   padding: 48px 32px 200px;
   min-height: 100%;
+  font-size: calc(var(--body-size) * var(--reader-zoom, 1));
 }
 
 /* -- Source editor (raw markdown textarea) -- */
@@ -344,8 +345,9 @@ button {
   background: var(--selection);
 }
 
-/* -- View toggle (Rendered / Source segmented control) -- */
-.view-toggle {
+/* -- Titlebar segmented controls -- */
+.view-toggle,
+.reader-zoom-controls {
   display: inline-flex;
   background: var(--bg-elev);
   border: 1px solid var(--border);
@@ -354,7 +356,9 @@ button {
   gap: 2px;
 }
 
-.view-toggle-btn {
+.view-toggle-btn,
+.reader-zoom-btn,
+.reader-zoom-value {
   background: transparent;
   border: none;
   padding: 2px 8px;
@@ -372,7 +376,20 @@ button {
   cursor: pointer;
 }
 
-.view-toggle-btn:hover {
+.reader-zoom-value {
+  gap: 4px;
+  min-width: 58px;
+}
+
+.reader-zoom-reset-icon {
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.view-toggle-btn:hover,
+.reader-zoom-btn:hover,
+.reader-zoom-value:hover {
   color: var(--text-muted);
 }
 
@@ -564,9 +581,10 @@ button {
 /* When the document is in reader mode, expand the prose space and remove
    editor chrome that distracts from reading. */
 [data-reader="true"] .editor-canvas .tiptap {
-  max-width: 680px;
-  padding: 80px 32px 200px;
-  font-size: calc(var(--body-size) * 1.05);
+  max-width: min(calc(680px * var(--reader-zoom, 1)), calc(100vw - 64px));
+  padding: calc(80px * var(--reader-zoom, 1)) 32px
+    calc(200px * var(--reader-zoom, 1));
+  font-size: calc(var(--body-size) * 1.05 * var(--reader-zoom, 1));
   line-height: calc(var(--body-leading) * 1.02);
 }
 
@@ -711,8 +729,12 @@ button {
 }
 
 @keyframes cmdk-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .cmdk-dialog {
@@ -731,8 +753,14 @@ button {
 }
 
 @keyframes cmdk-pop {
-  from { transform: translateY(-4px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .cmdk-input {
