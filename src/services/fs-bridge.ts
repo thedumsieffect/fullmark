@@ -3,8 +3,8 @@
  *
  * Responsibilities:
  *   - typed wrappers around our custom Rust commands (atomic_write_text,
- *     list_dir, read_text_file, resolve_path)
- *   - markdown filtering + recursive walk on the JS side
+ *     list_dir, read_text_file, resolve_path, walk_workspace)
+ *   - markdown-filtered workspace tree conversion
  *   - write-token suppression: every write tags its target path with an
  *     expiring token; watcher events with a non-expired matching token are
  *     dropped so we don't self-trigger a reload after our own save
@@ -28,22 +28,6 @@ export type ReadResult = {
   canonicalPath: string;
   modifiedMs?: number;
 };
-
-const MD_EXTENSIONS = new Set([".md", ".mdx", ".markdown"]);
-const ALWAYS_HIDE = new Set([
-  ".git",
-  ".svn",
-  ".hg",
-  ".DS_Store",
-  ".editor",
-  ".obsidian",
-  "node_modules",
-  "dist",
-  "build",
-  "target",
-  ".next",
-  ".turbo",
-]);
 
 // -- Write-token suppression -------------------------------------------------
 
@@ -112,7 +96,10 @@ export async function atomicWrite(
 ): Promise<string> {
   return queueWrite(path, async () => {
     const token = makeToken();
-    pendingWrites.set(path, { token, expiresAt: Date.now() + SUPPRESS_WINDOW_MS });
+    pendingWrites.set(path, {
+      token,
+      expiresAt: Date.now() + SUPPRESS_WINDOW_MS,
+    });
     try {
       return await invoke<string>("atomic_write_text", { path, content });
     } catch (e) {
@@ -127,7 +114,7 @@ export async function listDir(path: string): Promise<DirEntry[]> {
   return invoke<DirEntry[]>("list_dir", { path });
 }
 
-// -- Recursive walk + .md filter --------------------------------------------
+// -- Workspace walk + .md filter --------------------------------------------
 
 export type TreeNode = {
   name: string;
@@ -138,17 +125,56 @@ export type TreeNode = {
   hasMarkdown?: boolean;
 };
 
-function isMarkdown(name: string): boolean {
-  const idx = name.lastIndexOf(".");
-  if (idx < 0) return false;
-  return MD_EXTENSIONS.has(name.slice(idx).toLowerCase());
+export type WorkspaceEntry = {
+  name: string;
+  path: string;
+  isDir: boolean;
+  parent: number | null;
+};
+
+function fallbackRoot(root: string): TreeNode {
+  return {
+    name: root.split("/").pop() || root,
+    path: root,
+    isDir: true,
+    children: [],
+    hasMarkdown: false,
+  };
 }
 
-function isHidden(name: string): boolean {
-  if (ALWAYS_HIDE.has(name)) return true;
-  // Other dot-files: hide except for our own future config
-  if (name.startsWith(".")) return true;
-  return false;
+export function buildTreeFromWorkspaceEntries(
+  entries: WorkspaceEntry[],
+  root: string,
+): TreeNode {
+  if (entries.length === 0) return fallbackRoot(root);
+
+  const nodes = entries.map<TreeNode>((entry) => ({
+    name: entry.name,
+    path: entry.path,
+    isDir: entry.isDir,
+    children: entry.isDir ? [] : undefined,
+  }));
+
+  for (let idx = 1; idx < entries.length; idx++) {
+    const parentIdx = entries[idx].parent ?? 0;
+    const parent = nodes[parentIdx];
+    if (!parent?.isDir) continue;
+    parent.children ??= [];
+    parent.children.push(nodes[idx]);
+  }
+
+  function markMarkdown(node: TreeNode): boolean {
+    if (!node.isDir) {
+      node.hasMarkdown = true;
+      return true;
+    }
+    const hasMarkdown = (node.children ?? []).some(markMarkdown);
+    node.hasMarkdown = hasMarkdown;
+    return hasMarkdown;
+  }
+
+  markMarkdown(nodes[0]);
+  return nodes[0];
 }
 
 /**
@@ -160,23 +186,6 @@ function isHidden(name: string): boolean {
  * hatch by design. FullMark is a markdown editor; anything else is noise.
  */
 export async function walkWorkspace(root: string): Promise<TreeNode> {
-  async function walk(dir: string, name: string): Promise<TreeNode> {
-    const entries = await listDir(dir).catch(() => [] as DirEntry[]);
-    const children: TreeNode[] = [];
-    for (const e of entries) {
-      if (isHidden(e.name)) continue;
-      if (e.isDir) {
-        const sub = await walk(e.path, e.name);
-        if (sub.hasMarkdown) children.push(sub);
-      } else if (isMarkdown(e.name)) {
-        children.push({ name: e.name, path: e.path, isDir: false });
-      }
-    }
-    const hasMd = children.some(
-      (c) => (!c.isDir && isMarkdown(c.name)) || (c.isDir && c.hasMarkdown),
-    );
-    return { name, path: dir, isDir: true, children, hasMarkdown: hasMd };
-  }
-
-  return walk(root, root.split("/").pop() || root);
+  const entries = await invoke<WorkspaceEntry[]>("walk_workspace", { root });
+  return buildTreeFromWorkspaceEntries(entries, root);
 }

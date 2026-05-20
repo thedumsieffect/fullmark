@@ -2,13 +2,20 @@
   "name": "fullmark",
   "private": true,
   "version": "0.1.5",
+  "packageManager": "pnpm@10.18.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "build:install": "scripts/build-install.sh",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test:unit": "vitest run",
+    "test:fidelity": "node scripts/fidelity-gate.mjs --profiles small,unicode-paths --limit 120",
+    "test:perf": "node scripts/perf-bench.mjs --profiles small,medium,chaos --sample-size 128",
+    "test:e2e:web": "playwright test --config playwright.config.ts",
+    "test:e2e:tauri": "vitest run --passWithNoTests tests/e2e/tauri/**/*.test.ts",
+    "test:ci": "vitest run && node scripts/fidelity-gate.mjs --profiles small,unicode-paths --limit 120 && node scripts/perf-bench.mjs --profiles small --sample-size 32 && pnpm test:e2e:web"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
@@ -16,6 +23,7 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1",
+    "@tauri-apps/plugin-opener": "^2.5.4",
     "@tiptap/core": "^3.23.1",
     "@tiptap/extension-code-block": "^3.23.1",
     "@tiptap/extension-code-block-lowlight": "^3.23.1",
@@ -40,6 +48,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tauri-apps/cli": "^2",
     "@types/node": "^25.6.2",

@@ -11,34 +11,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWorkspaceStore } from "@/stores/workspace";
 import { useTabsStore } from "@/stores/tabs";
-import type { TreeNode } from "@/services/fs-bridge";
+import type { WorkspaceFile } from "@/stores/workspace";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-}
-
-function flattenFiles(node: TreeNode | null, out: TreeNode[] = []): TreeNode[] {
-  if (!node) return out;
-  if (!node.isDir) out.push(node);
-  if (node.children) for (const c of node.children) flattenFiles(c, out);
-  return out;
-}
-
-function stripExt(name: string): string {
-  const idx = name.lastIndexOf(".");
-  if (idx <= 0) return name;
-  const ext = name.slice(idx).toLowerCase();
-  if (ext === ".md" || ext === ".mdx" || ext === ".markdown")
-    return name.slice(0, idx);
-  return name;
-}
-
-function relativePath(fullPath: string, workspaceRoot: string | null): string {
-  if (workspaceRoot && fullPath.startsWith(workspaceRoot + "/")) {
-    return fullPath.slice(workspaceRoot.length + 1);
-  }
-  return fullPath;
 }
 
 /**
@@ -46,7 +23,7 @@ function relativePath(fullPath: string, workspaceRoot: string | null): string {
  * Returns null if not all query chars are present in order; otherwise a score
  * (higher is better) reflecting how tightly the query matched.
  */
-function fuzzyScore(query: string, target: string): number | null {
+export function fuzzyScore(query: string, target: string): number | null {
   if (!query) return 0;
   const q = query.toLowerCase();
   const t = target.toLowerCase();
@@ -69,39 +46,44 @@ function fuzzyScore(query: string, target: string): number | null {
   return score - t.length * 0.05;
 }
 
-type Ranked = { file: TreeNode; score: number };
+type Ranked = { file: WorkspaceFile; score: number };
+
+export function rankWorkspaceFiles(
+  files: WorkspaceFile[],
+  query: string,
+  limit = 20,
+): Ranked[] {
+  const q = query.trim();
+  if (!q) {
+    return files.slice(0, limit).map((file) => ({ file, score: 0 }));
+  }
+
+  const ranked: Ranked[] = [];
+  for (const file of files) {
+    const nameScore = fuzzyScore(q, file.searchName);
+    const pathScore = fuzzyScore(q, file.searchPath);
+    if (nameScore === null && pathScore === null) continue;
+    const score = Math.max(
+      nameScore ?? -Infinity,
+      (pathScore ?? -Infinity) * 0.6,
+    );
+    ranked.push({ file, score });
+  }
+  ranked.sort((a, b) => b.score - a.score);
+  return ranked.slice(0, limit);
+}
 
 export function QuickSwitcher({ open, onClose }: Props) {
-  const tree = useWorkspaceStore((s) => s.tree);
-  const root = useWorkspaceStore((s) => s.root);
+  const files = useWorkspaceStore((s) => s.files);
   const openFile = useTabsStore((s) => s.openFile);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const files = useMemo(() => flattenFiles(tree), [tree]);
-
   const filtered = useMemo<Ranked[]>(() => {
-    if (!query.trim()) {
-      return files.slice(0, 20).map((f) => ({ file: f, score: 0 }));
-    }
-    const q = query.trim();
-    const ranked: Ranked[] = [];
-    for (const f of files) {
-      const rel = relativePath(f.path, root);
-      const nameScore = fuzzyScore(q, stripExt(f.name));
-      const pathScore = fuzzyScore(q, rel);
-      if (nameScore === null && pathScore === null) continue;
-      const score = Math.max(
-        nameScore ?? -Infinity,
-        (pathScore ?? -Infinity) * 0.6,
-      );
-      ranked.push({ file: f, score });
-    }
-    ranked.sort((a, b) => b.score - a.score);
-    return ranked.slice(0, 20);
-  }, [files, query, root]);
+    return rankWorkspaceFiles(files, query);
+  }, [files, query]);
 
   // Reset selection / query / scroll when opening or filter changes
   useEffect(() => {
@@ -170,10 +152,6 @@ export function QuickSwitcher({ open, onClose }: Props) {
             <div className="cmdk-empty">No files match "{query}"</div>
           )}
           {filtered.map(({ file }, idx) => {
-            const rel = relativePath(file.path, root);
-            const folder = rel.includes("/")
-              ? rel.slice(0, rel.lastIndexOf("/"))
-              : "";
             return (
               <button
                 key={file.path}
@@ -184,16 +162,24 @@ export function QuickSwitcher({ open, onClose }: Props) {
                 onMouseEnter={() => setSelected(idx)}
                 onClick={() => choose(idx)}
               >
-                <div className="cmdk-result-name">{stripExt(file.name)}</div>
-                {folder && <div className="cmdk-result-path">{folder}</div>}
+                <div className="cmdk-result-name">{file.label}</div>
+                {file.folder && (
+                  <div className="cmdk-result-path">{file.folder}</div>
+                )}
               </button>
             );
           })}
         </div>
         <div className="cmdk-hints">
-          <span><kbd>↑↓</kbd> navigate</span>
-          <span><kbd>↵</kbd> open</span>
-          <span><kbd>esc</kbd> close</span>
+          <span>
+            <kbd>↑↓</kbd> navigate
+          </span>
+          <span>
+            <kbd>↵</kbd> open
+          </span>
+          <span>
+            <kbd>esc</kbd> close
+          </span>
         </div>
       </div>
     </div>

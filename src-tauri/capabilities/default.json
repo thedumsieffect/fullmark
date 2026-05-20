@@ -9,6 +9,7 @@
     "core:window:allow-internal-toggle-maximize",
     "fs:default",
     "dialog:default",
+    "opener:default",
     {
       "identifier": "fs:scope",
       "allow": [

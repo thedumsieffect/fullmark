@@ -86,6 +86,7 @@
 /* Links: accent color, 1px underline, 3px offset. Hover saturates. */
 .tiptap a {
   color: var(--accent);
+  cursor: pointer;
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
@@ -361,5 +362,8 @@
   background: var(--hl-deletion-bg, color-mix(in oklab, red 12%, transparent));
 }
 .tiptap .hljs-addition {
-  background: var(--hl-addition-bg, color-mix(in oklab, green 12%, transparent));
+  background: var(
+    --hl-addition-bg,
+    color-mix(in oklab, green 12%, transparent)
+  );
 }
